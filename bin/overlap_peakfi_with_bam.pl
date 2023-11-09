@@ -6,6 +6,7 @@
 # use lib "/projects/ps-yeolab/software/eclipidrmergepeaks/0.0.1/bin/perl-modules/share/perl5";
 ####
 
+use lib "/n/data1/cores/bcbio/eclip/perl5/lib/perl5/";
 
 use warnings;
 use strict;
@@ -108,7 +109,7 @@ for my $peak (keys %peak_read_counts) {
     my ($start,$stop) = split(/\-/,$pos);
     print OUT "$chr\t$start\t$stop\t$log10pval\t$l2fc\t$str\n";
     print OUTFULL "$chr\t$start\t$stop\t$peak\t".$peak_read_counts{$peak}{"expt"}."\t".$peak_read_counts{$peak}{"input"}."\t$chipval\t$chival\t$chitype\t$chienrdepl\t$log10pval\t$l2fc\n";
-    
+
 
 }
 close(OUT);
@@ -186,10 +187,10 @@ sub chi_square {
     my $expb = ($b+$d)*($a+$b)/$tot;
     my $expc = ($a+$c)*($c+$d)/$tot;
     my $expd = ($b+$d)*($c+$d)/$tot;
-    
+
     if ($expa >= 5 || $expb >= 5 || $expc >= 5 || $expd >= 5) {
         my $chival = &square(&abs($a-$expa)-0.5)/$expa +  &square(&abs($b-$expb)-0.5)/$expb + &square(&abs($c-$expc)-0.5)/$expc +  &square(&abs($d-$expd)-0.5)/$expd;
-        
+
         my $pval = Statistics::Distributions::chisqrprob(1,&abs($chival));
 
         if ($a<$expa) {
@@ -205,7 +206,7 @@ sub chi_square {
 
 sub fisher_exact {
     my ($x1,$x2,$y1,$y2) = @_;
-    #Run fisher exact test in R                                                                                                                            
+    #Run fisher exact test in R
 
     $R->run("rm(list = ls())");
     $R->run("blah <- matrix(c(".$x1.",".$x2.",".$y1.",".$y2."),nrow=2)");
@@ -223,7 +224,7 @@ sub fisher_exact_backup {
     system("rm $fisher_tmp_fi_out");
     system("rm $fisher_tmp_fi");
     my $fisher_tmp_fi_s = $fisher_tmp_fi.".s";
-    
+
     system("rm $fisher_tmp_fi_s");
 
     open(LISTA,">$fisher_tmp_fi");
@@ -241,15 +242,15 @@ sub fisher_exact_backup {
 	printf RFI "fisher.test(blah)\n";
 	printf RFI "sink()\n";
 	system("  R --save --quiet < $fisher_tmp_fi_s");
-	
-	
+
+
 	open(FISH,$fisher_tmp_fi_out);
 	for my $line (<FISH>) {
 	    chomp($line);
 	    if ($line =~ /p\-value\s\=\s(\S+)$/ || $line =~ /p\-value\s\<\s(\S+)$/) {
 		$p_value_vs_bgd = $1;
 	    }
-	    
+
 	}
 	close(FISH);
  #   my $log10pval = sprintf("%.5f",&log10($p_value_vs_bgd));
@@ -289,18 +290,18 @@ sub read_bamfi {
     }
     while (<B>) {
 	my $r1 = $_;
-	
+
 	if ($r1 =~ /^\@/) {
 	    next;
-	} 
+	}
 	my @tmp_r1 = split(/\t/,$r1);
 	my @read_name = split(/\:/,$tmp_r1[0]);
 	my $randommer = $read_name[0];
-	
+
 	my $r1_cigar = $tmp_r1[5];
 	my $r1sam_flag = $tmp_r1[1];
 	my $mismatch_flags = $tmp_r1[14];
-	
+
 	my $r1_chr = $tmp_r1[2];
 	my $r1_start = $tmp_r1[3];
 
@@ -314,9 +315,9 @@ sub read_bamfi {
     }
 
 
-	
+
 	my @read_regions = &parse_cigar_string($r1_start,$r1_cigar,$r1_chr,$frag_strand);
-	
+
 	my %tmp_hash;
 	for my $region (@read_regions) {
 	    my ($rchr,$rstr,$rpos) = split(/\:/,$region);
@@ -327,11 +328,11 @@ sub read_bamfi {
 	    my $rx = int($rstart / $hashing_value);
 	    my $ry = int($rstop  / $hashing_value);
 	    for my $ri ($rx..$ry) {
-		
+
 		for my $peak (@{$peaks{$rchr}{$rstr}{$ri}}) {
 		    my ($pchr,$ppos,$pstr,$ppval) = split(/\:/,$peak);
 		    my ($pstart,$pstop) = split(/\-/,$ppos);
-		    
+
 #		    next if ($pstart > $rstop || $pstop < $rstart);
 #		    if ($pstop == $rstart) {
 #		    if ($pstart == $rstop) {
@@ -344,7 +345,7 @@ sub read_bamfi {
 		}
 	    }
 	}
-	
+
 	for my $peak (keys %tmp_hash) {
 	    $peak_read_counts{$peak}{$label}++;
 	}
@@ -367,11 +368,11 @@ sub parse_cigar_string {
     my @regions;
 
     while ($flags =~ /(\d+)([A-Z])/g) {
-       
+
         if ($2 eq "N") {
             #read has intron of N bases at location
 
-# 1 based, closed ended to 0 based, right side open ended fix            
+# 1 based, closed ended to 0 based, right side open ended fix
 #            push @regions,$chr.":".$strand.":".$region_start_pos."-".($current_pos-1);
             push @regions,$chr.":".$strand.":".($region_start_pos-1)."-".($current_pos-1);
 
@@ -394,7 +395,7 @@ sub parse_cigar_string {
         }
     }
 
-# 1 based, closed ended to 0 based, right side open ended fix            
+# 1 based, closed ended to 0 based, right side open ended fix
 # $region_start_pos is 1-based, closed ended -> ($region_start_pos-1) is 0-based, closed ended
 # ($current_pos-1) is 1-based, closed ended -> ($current_pos-1-1) is 0-based, closed ended -> ($current_pos-1-1+1) is 0-based, open ended
 
@@ -437,8 +438,8 @@ sub read_peakfi {
 #	    $lc++;
 #	}
 	$peak_read_counts{$peak}{allpeaks} = 1;
-	
-	
+
+
 	for my $i ($x..$y) {
 	    push @{$peaks{$chr}{$strand}{$i}},$chr.":".$start."-".$stop.":".$strand.":".$pval;
 	}

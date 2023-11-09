@@ -62,28 +62,22 @@ def barcode_collapse(in_bam, out_bam):
             samfile_read1 = itertools.islice(samfile1, 0, None, 2)
             samfile_read2 = itertools.islice(samfile2, 1, None, 2)
             for read1, read2 in zip(samfile_read1, samfile_read2):
-                print("1:")
-                print(read1.qname, read2.qname)
                 if not read1.qname == read2.qname:
                     print(read1.qname, read2.qname)
                     raise Exception("Read Names don't match")
                 if read1.is_unmapped and read2.is_unmapped:
                     #Both reads don't map, don't even both saving them.
-                    print('unmap')
                     continue
                 if ((not read1.is_unmapped and read2.is_unmapped)
                     or (read1.is_unmapped and read2.is_unmapped)):
-                    print('unmap1')
                     number_of_unmapped_mate_pairs += 1
                     continue
                 if read1.rname != read2.rname:
-                    print('unmap2')
                     different_chroms += 1
                     continue
 
                 #if the read order is swapped swap everything before running.
                 if not read1.is_read1:
-                    print('switch')
                     read1, read2 = read2, read1
 
                 randomer = read1.qname.split(":")[0]
@@ -97,16 +91,14 @@ def barcode_collapse(in_bam, out_bam):
                 # increment appropriate counter
                 total_count[randomer] += 1
                 if unique_location in result_dict:
-                    print('rm')
                     removed_count[randomer] += 1
                     continue
-                print('good')
+
                 result_dict[(read1.rname, start, stop, strand, randomer)] = (read1, read2)
 
         # ouput barcode collapsed reads
         with pysam.Samfile(out_bam, 'wb', template=samfile1) as out_bam:
             for key, (read1, read2) in result_dict.items():
-                print('key')
                 out_bam.write(read1)
                 out_bam.write(read2)
 
